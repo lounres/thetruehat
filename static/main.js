@@ -12,31 +12,10 @@ const EXPLANATION_TIME = 20000;
 const AFTERMATH_TIME = 3000;
 const SPEAKER_READY = "Я готов объяснять";
 const LISTENER_READY = "Я готов отгадывать";
+const TIME_SYNC_DELTA = 300000;
 
 
-const TIME_SYNC_DELTA = 1200000;
-
-
-let delta = 0;
-
-function getTime() {
-    return performance.now() + delta;
-}
-
-async function getDelta() {
-    let zero = performance.now();
-    time = (await (await fetch("http://zadachi.mccme.ru/misc/time/getTime.cgi")).json()).time;
-    let now = performance.now();
-    delta = time + (now - zero) / 2 - now;
-}
-
-async function maintainDelta() {
-    setTimeout(maintainDelta, TIME_SYNC_DELTA);
-    getDelta();
-    console.log((new Date).getTime() - getTime());
-}
-
-function animate({startTime, timing, draw, duration, stopCondition}) {
+function animate({startTime, timing, draw, duration, stopCondition, getTime}) {
     // Largely taken from https://learn.javascript.ru
     timing = timing || (time => time);
     stopCondition = stopCondition || (() => false)
@@ -155,6 +134,7 @@ class App {
         this.debug = true;
 
         this.socket = io.connect(`http://${document.domain}:${PORT}`);
+        this.ts = timesync.create({server: "/timesync", interval: TIME_SYNC_DELTA});
 
         this.pageLog = [];
         this.myUsername = "";
@@ -391,7 +371,7 @@ class App {
                     break;
                 }
 
-            }, data.startTime - getTime() - DELAY_TIME);
+            }, data.startTime - this.ts.now() - DELAY_TIME);
             break;
         }
     }
@@ -409,6 +389,9 @@ class App {
             },
             stopCondition: () => {
                 return _this.roundId != roundId;
+            },
+            getTime: () => {
+                return _this.ts.now();
             }
         })
     }
@@ -428,6 +411,9 @@ class App {
             },
             stopCondition: () => {
                 return _this.roundId != roundId;
+            },
+            getTime: () => {
+                return _this.ts.now();
             }
         })
         return animation.then(() => {
@@ -452,6 +438,9 @@ class App {
             },
             stopCondition: () => {
                 return _this.roundId != roundId;
+            },
+            getTime: () => {
+                return _this.ts.now();
             }
         })
         return animation.then(() => {
@@ -635,7 +624,6 @@ class App {
 
 let app;
 window.onload = function() {
-    maintainDelta().then(function () {
-        app = new App()
-    });
+    app = new App();
 }
+

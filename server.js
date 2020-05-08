@@ -17,6 +17,7 @@ const express = require("express");
 const app = express();
 const server = new (require("http").Server)(app);
 const io = require("socket.io")(server);
+const ts = require("timesync/server");
 
 server.listen(PORT);
 console.log("Listening on port " + PORT);
@@ -28,6 +29,9 @@ app.use(express.static("static"));
 app.get("/", function(req, res) {
     res.sendFile(__dirname + "/index.html");
 });
+
+// Serving time
+app.use("/timesync", ts.requestHandler);
 
 //----------------------------------------------------------
 // Handy functions
